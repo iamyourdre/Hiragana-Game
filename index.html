@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kuis Hiragana Dasar</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .kana-char {
+            font-family: 'Noto Sans JP', sans-serif;
+        }
+        /* Custom transition for smooth feedback */
+        .transition-all {
+            transition: all 0.3s ease-in-out;
+        }
+        .correct-answer {
+            /* Styling for the correct answer button after a wrong guess */
+            background-color: #34D399 !important; /* Tailwind green-400/500 */
+            color: white !important;
+            transform: scale(1.05);
+        }
+    </style>
+</head>
+<body class="bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-200 flex items-center justify-center min-h-screen p-4">
+
+    <div id="quiz-container" class="w-full max-w-md mx-auto bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-6 md:p-8 text-center">
+        
+        <div id="start-screen">
+            <h1 class="text-3xl font-bold text-indigo-600 dark:text-indigo-400 mb-2">Kuis Hiragana Dasar</h1>
+            <p class="text-gray-600 dark:text-gray-400 mb-2">Mode Latihan Cepat</p>
+            <p class="text-gray-600 dark:text-gray-400 mb-8">Rekor Waktu Sempurna (46/46): <span id="best-time-start" class="font-bold text-indigo-500 dark:text-indigo-400">-</span></p>
+            <button id="start-button" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded-lg text-lg transition-all transform hover:scale-105 focus:outline-none focus:ring-4 focus:ring-indigo-300 dark:focus:ring-indigo-800">
+                Mulai Kuis (46 Soal)
+            </button>
+        </div>
+
+        <div id="quiz-screen" class="hidden">
+            <div class="mb-6 grid grid-cols-3 items-center text-lg">
+                <div class="font-semibold text-left">Skor: <span id="score" class="text-indigo-500 dark:text-indigo-400 font-bold">0</span></div>
+                <div class="font-semibold text-center">Waktu: <span id="timer" class="text-indigo-500 dark:text-indigo-400 font-bold">0s</span></div>
+                <div class="font-semibold text-right">Soal: <span id="question-counter" class="text-indigo-500 dark:text-indigo-400 font-bold">1 / 46</span></div>
+            </div>
+
+            <div class="bg-gray-100 dark:bg-gray-700 rounded-xl mb-8 flex items-center justify-center" style="height: 200px;">
+                <p id="hiragana-char" class="kana-char text-9xl font-bold text-gray-800 dark:text-gray-100"></p>
+            </div>
+            
+            <p class="mb-4 font-semibold text-xl">Karakter di atas dibaca...</p>
+
+            <div id="options-container" class="grid grid-cols-2 gap-4">
+                </div>
+            
+            <div id="clue-container" class="mt-4 text-center">
+                <button id="clue-button" class="text-sm text-indigo-500 hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300 font-semibold">Butuh Bantuan?</button>
+                <p id="clue-text" class="hidden mt-2 text-gray-600 dark:text-gray-400 italic bg-gray-100 dark:bg-gray-700 p-2 rounded-lg"></p>
+            </div>
+
+            <div id="feedback-container" class="mt-4 h-16 flex flex-col items-center justify-center">
+                <p id="feedback-text" class="text-xl font-bold h-7"></p>
+                <button id="next-button" class="hidden mt-3 w-3/4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg transition-all transform hover:scale-105">
+                    Lanjut
+                </button>
+            </div>
+        </div>
+        
+        <div id="end-screen" class="hidden">
+            <h2 class="text-3xl font-bold mb-4">Kuis Selesai!</h2>
+            <p class="text-xl mb-2">Waktu Mengerjakan: <span id="final-time" class="font-bold text-indigo-600 dark:text-indigo-400"></span></p>
+            <p class="text-xl mb-2">Skor Akhir Anda:</p>
+            <p id="final-score" class="text-6xl font-bold text-indigo-600 dark:text-indigo-400 mb-6"></p>
+            <p id="record-message" class="hidden text-lg text-green-500 font-bold mb-6">🎉 Rekor Baru (Sempurna)!</p>
+            <p id="final-message" class="text-lg text-gray-600 dark:text-gray-400 mb-8"></p>
+            <button id="restart-button" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded-lg text-lg transition-all transform hover:scale-105">
+                Coba Lagi
+            </button>
+        </div>
+
+    </div>
+
+    <script>
+        // --- DATA HIRAGANA DENGAN MNEMONIC (SEMUA 46 SILABEL DASAR) ---
+        const hiraganaData = [
+            // Baris Vokal
+            { kana: 'あ', romaji: 'a', mnemonic: 'Seperti buah Apel dengan daunnya.' },
+            { kana: 'い', romaji: 'i', mnemonic: 'Dua i-kan sedang berenang.' },
+            { kana: 'う', romaji: 'u', mnemonic: 'Orang dipukul di perut sampai bilang "Ugh!"' },
+            { kana: 'え', romaji: 'e', mnemonic: 'Anjing E-ksotis dengan bulu lebat (mirip N).' },
+            { kana: 'お', romaji: 'o', mnemonic: 'Sebuah UFO terbang di angkasa, Oh!' },
+            // Baris K
+            { kana: 'か', romaji: 'ka', mnemonic: 'K-ekuatan (力, chikara) untuk memotong.' },
+            { kana: 'き', romaji: 'ki', mnemonic: 'Sebuah Kunci (key) antik.' },
+            { kana: 'く', romaji: 'ku', mnemonic: 'Paruh burung Ku-kau (cuckoo).' },
+            { kana: 'け', romaji: 'ke', mnemonic: 'Sebuah K-andang atau gua.' },
+            { kana: 'こ', romaji: 'ko', mnemonic: 'Dua ekor Ko-i berenang.' },
+            // Baris S
+            { kana: 'さ', romaji: 'sa', mnemonic: 'Mirip き (ki), tapi hanya Sa-tu goresan di bawah.' },
+            { kana: 'し', romaji: 'shi', mnemonic: 'Kail pancing untuk menangkap i-shi (ikan).' },
+            { kana: 'す', romaji: 'su', mnemonic: 'Sebuah Su-ngai yang berliku-liku (ada kepala).' },
+            { kana: 'せ', romaji: 'se', mnemonic: 'Mulut yang tersenyum Se-nang (mirip huruf S).' },
+            { kana: 'そ', romaji: 'so', mnemonic: 'Goresan petir (zigzag), So-nar.' },
+            // Baris T
+            { kana: 'た', romaji: 'ta', mnemonic: 'Mirip dengan huruf latin "ta" atau "T" dengan ekor.' },
+            { kana: 'ち', romaji: 'chi', mnemonic: 'Angka 5 terbalik, seperti pemandu sorak (cheerleader).' },
+            { kana: 'つ', romaji: 'tsu', mnemonic: 'Ombak Tsu-nami yang besar (berbentuk satu lekukan).' },
+            { kana: 'て', romaji: 'te', mnemonic: 'An-te-na atau mirip huruf "T".' },
+            { kana: 'と', romaji: 'to', mnemonic: 'Sebuah to-mat dengan duri di atasnya.' },
+            // Baris N
+            { kana: 'な', romaji: 'na', mnemonic: 'N-enek sedang merajut.' },
+            { kana: 'に', romaji: 'ni', mnemonic: 'Dua N-ikmat (two, 2) yang disatukan.' },
+            { kana: 'ぬ', romaji: 'nu', mnemonic: 'N-enek memegang ikan di kail.' },
+            { kana: 'ね', romaji: 'ne', mnemonic: 'N-eko (kucing) sedang tidur, ekornya melingkar.' },
+            { kana: 'の', romaji: 'no', mnemonic: 'Tanda "NO Smoking" atau "No Entry" (lingkaran).' },
+            // Baris H
+            { kana: 'は', romaji: 'ha', mnemonic: 'Dua pilar Ha-lter yang diangkat.' },
+            { kana: 'ひ', romaji: 'hi', mnemonic: 'Wajah yang Hi-larious.' },
+            { kana: 'ふ', romaji: 'fu', mnemonic: 'Gunung Fu-ji yang besar.' },
+            { kana: 'へ', romaji: 'he', mnemonic: 'He-licopter terbang di udara.' },
+            { kana: 'ほ', romaji: 'ho', mnemonic: 'Ha-lter dengan tiang panjang di tengah.' },
+            // Baris M
+            { kana: 'ま', romaji: 'ma', mnemonic: 'Mirip "M" dengan kaki terlipat.' },
+            { kana: 'み', romaji: 'mi', mnemonic: 'Angka 3 Mi-ris (mirip angka tiga).' },
+            { kana: 'む', romaji: 'mu', mnemonic: 'Wajah sapi yang bilang "Muuu..."' },
+            { kana: 'め', romaji: 'me', mnemonic: 'Sebuah Me-ngkuk dan sumpit.' },
+            { kana: 'も', romaji: 'mo', mnemonic: 'Sebuah Mo-bile (mirip huruf M).' },
+            // Baris Y
+            { kana: 'や', romaji: 'ya', mnemonic: 'Kapal Ya-cht dengan layar.' },
+            { kana: 'ゆ', romaji: 'yu', mnemonic: 'Orang yang Yu-mmy sedang berjongkok.' },
+            { kana: 'よ', romaji: 'yo', mnemonic: 'Yo-yo yang sedang diikat.' },
+            // Baris R
+            { kana: 'ら', romaji: 'ra', mnemonic: 'Mirip orang berlari Ra-pat (mirip huruf R dengan satu loop).' },
+            { kana: 'り', romaji: 'ri', mnemonic: 'Dua garis Ri-ngan (mirip dua garis miring).' },
+            { kana: 'る', romaji: 'ru', mnemonic: 'Bunga Ru-ssian dengan ekor.' },
+            { kana: 'れ', romaji: 're', mnemonic: 'Re-storan dengan pintu melengkung.' },
+            { kana: 'ろ', romaji: 'ro', mnemonic: 'Mirip る (ru), tapi tanpa ekor lingkaran.' },
+            // Baris W & N
+            { kana: 'わ', romaji: 'wa', mnemonic: 'Wa-mpire dengan jubah.' },
+            { kana: 'を', romaji: 'wo', mnemonic: 'Huruf "O" yang melingkari dunia (digunakan sebagai partikel).' },
+            { kana: 'ん', romaji: 'n', mnemonic: 'N-aga yang sedang melingkar.' }
+        ];
+
+        // --- ELEMEN DOM ---
+        const startScreen = document.getElementById('start-screen');
+        const quizScreen = document.getElementById('quiz-screen');
+        const endScreen = document.getElementById('end-screen');
+        
+        const startButton = document.getElementById('start-button');
+        const restartButton = document.getElementById('restart-button');
+
+        const hiraganaCharEl = document.getElementById('hiragana-char');
+        const optionsContainer = document.getElementById('options-container');
+        const feedbackText = document.getElementById('feedback-text');
+        const nextButton = document.getElementById('next-button');
+        
+        const scoreEl = document.getElementById('score');
+        const questionCounterEl = document.getElementById('question-counter');
+        const finalScoreEl = document.getElementById('final-score');
+        const finalMessageEl = document.getElementById('final-message');
+        
+        const clueButton = document.getElementById('clue-button');
+        const clueText = document.getElementById('clue-text');
+
+        const timerEl = document.getElementById('timer');
+        const bestTimeStartEl = document.getElementById('best-time-start');
+        const finalTimeEl = document.getElementById('final-time');
+        const recordMessageEl = document.getElementById('record-message');
+
+        // --- STATE KUIS ---
+        let shuffledQuestions = [];
+        let currentQuestionIndex = 0;
+        let score = 0;
+        let correctAnswer = '';
+        let currentKana = '';
+        let startTime;
+        let timerInterval = null;
+        let bestTime = Infinity;
+        let isAnswered = false; // Status untuk mencegah klik ganda
+
+        // --- FUNGSI-FUNGSI ---
+
+        function formatTime(totalSeconds) {
+            const minutes = Math.floor(totalSeconds / 60);
+            const seconds = Math.floor(totalSeconds % 60);
+            if (minutes > 0) {
+                return `${minutes}m ${seconds}s`;
+            }
+            return `${seconds}s`;
+        }
+
+        function loadBestTime() {
+            // Best time hanya untuk skor sempurna (skor === total pertanyaan)
+            const savedTime = localStorage.getItem('hiraganaQuizBestTime');
+            if (savedTime) {
+                bestTime = parseFloat(savedTime);
+                bestTimeStartEl.textContent = formatTime(bestTime);
+            } else {
+                bestTimeStartEl.textContent = '-';
+                bestTime = Infinity;
+            }
+        }
+
+        function updateTimer() {
+            const elapsedTime = Math.floor((Date.now() - startTime) / 1000);
+            timerEl.textContent = formatTime(elapsedTime);
+        }
+
+        function shuffleArray(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+            return array;
+        }
+
+        function startGame() {
+            startScreen.classList.add('hidden');
+            endScreen.classList.add('hidden');
+            quizScreen.classList.remove('hidden');
+
+            score = 0;
+            currentQuestionIndex = 0;
+            shuffledQuestions = shuffleArray([...hiraganaData]);
+            
+            scoreEl.textContent = score;
+
+            startTime = Date.now();
+            if (timerInterval) clearInterval(timerInterval);
+            timerInterval = setInterval(updateTimer, 1000);
+            updateTimer();
+
+            loadQuestion();
+        }
+
+        function loadQuestion() {
+            isAnswered = false;
+            feedbackText.textContent = '';
+            feedbackText.className = 'text-xl font-bold h-7';
+            optionsContainer.innerHTML = '';
+            clueText.classList.add('hidden');
+            clueButton.classList.remove('hidden');
+            clueText.textContent = '';
+            nextButton.classList.add('hidden');
+            
+            if (currentQuestionIndex >= shuffledQuestions.length) {
+                endGame();
+                return;
+            }
+
+            questionCounterEl.textContent = `${currentQuestionIndex + 1} / ${shuffledQuestions.length}`;
+            const currentQuestion = shuffledQuestions[currentQuestionIndex];
+            correctAnswer = currentQuestion.romaji;
+            currentKana = currentQuestion.kana;
+            hiraganaCharEl.textContent = currentKana;
+
+            const options = generateOptions(correctAnswer);
+            
+            options.forEach(option => {
+                const button = document.createElement('button');
+                button.textContent = option;
+                button.classList.add('option-button', 'p-4', 'rounded-lg', 'text-lg', 'font-semibold', 'bg-gray-200', 'dark:bg-gray-600', 'hover:bg-gray-300', 'dark:hover:bg-gray-500', 'transition-all', 'transform', 'hover:scale-105');
+                button.addEventListener('click', () => checkAnswer(option, button));
+                optionsContainer.appendChild(button);
+            });
+        }
+        
+        function generateOptions(correct) {
+            let options = [correct];
+            const allRomaji = hiraganaData.map(d => d.romaji);
+            
+            while (options.length < 4) {
+                const randomRomaji = allRomaji[Math.floor(Math.random() * allRomaji.length)];
+                if (!options.includes(randomRomaji)) {
+                    options.push(randomRomaji);
+                }
+            }
+            return shuffleArray(options);
+        }
+
+        function checkAnswer(selectedOption, button) {
+            if (isAnswered) return;
+            isAnswered = true;
+
+            const allButtons = document.querySelectorAll('.option-button');
+            clueButton.classList.add('hidden');
+
+            if (selectedOption === correctAnswer) {
+                score++;
+                scoreEl.textContent = score;
+                feedbackText.textContent = 'Benar!';
+                feedbackText.classList.add('text-green-500');
+                button.classList.add('!bg-green-500', 'text-white');
+                
+                // Langsung Lanjut ke pertanyaan berikutnya setelah jeda singkat
+                allButtons.forEach(btn => btn.disabled = true);
+                setTimeout(nextQuestion, 600); 
+
+            } else {
+                feedbackText.textContent = `Salah! Jawaban benar adalah: ${correctAnswer}`;
+                feedbackText.classList.add('text-red-500');
+                button.classList.add('!bg-red-500', 'text-white');
+                
+                // Jika salah, tampilkan tombol Lanjut dan disable semua tombol
+                allButtons.forEach(btn => {
+                    btn.disabled = true;
+                    btn.classList.remove('hover:bg-gray-300', 'dark:hover:bg-gray-500', 'hover:scale-105');
+                    if (btn.textContent === correctAnswer) {
+                        btn.classList.add('correct-answer');
+                    }
+                });
+                nextButton.classList.remove('hidden');
+            }
+        }
+        
+        function showClue() {
+            const currentQuestion = shuffledQuestions[currentQuestionIndex];
+            clueText.textContent = currentQuestion.mnemonic;
+            clueText.classList.remove('hidden');
+            clueButton.classList.add('hidden');
+        }
+
+        function nextQuestion() {
+            currentQuestionIndex++;
+            loadQuestion();
+        }
+
+        function endGame() {
+            clearInterval(timerInterval);
+            timerInterval = null;
+            const elapsedTime = (Date.now() - startTime) / 1000;
+
+            quizScreen.classList.add('hidden');
+            endScreen.classList.remove('hidden');
+            
+            finalTimeEl.textContent = formatTime(elapsedTime);
+            finalScoreEl.textContent = `${score} / ${shuffledQuestions.length}`;
+            
+            recordMessageEl.classList.add('hidden');
+            let message = '';
+
+            if (score === shuffledQuestions.length) {
+                if (elapsedTime < bestTime) {
+                    bestTime = elapsedTime;
+                    localStorage.setItem('hiraganaQuizBestTime', bestTime);
+                    recordMessageEl.classList.remove('hidden');
+                }
+                message = "Luar biasa! Anda berhasil dengan sempurna!";
+            } else {
+                const percentage = (score / shuffledQuestions.length) * 100;
+                if (percentage >= 80) {
+                    message = "Hebat! Skor Anda sangat bagus. Teruslah berlatih!";
+                } else if (percentage >= 50) {
+                    message = "Bagus! Anda sudah tahu banyak. Sedikit lagi!";
+                } else {
+                    message = "Tidak apa-apa! Semangat terus. Coba lagi untuk mengingat mnemoniknya.";
+                }
+            }
+            
+            loadBestTime();
+
+            finalMessageEl.textContent = message;
+        }
+
+        // --- EVENT LISTENERS ---
+        startButton.addEventListener('click', startGame);
+        restartButton.addEventListener('click', startGame);
+        nextButton.addEventListener('click', nextQuestion);
+        clueButton.addEventListener('click', showClue);
+
+        // --- Initial Load ---
+        loadBestTime();
+    </script>
+</body>
+</html>
